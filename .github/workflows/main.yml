@@ -90,7 +90,8 @@ jobs:
         run: |
           echo "" >> android/gradle.properties
           echo "android.useAndroidX=true" >> android/gradle.properties
-          echo "android.enableJetifier=true" >> android/gradle.properties
+          echo "android.enableJetifier=false" >> android/gradle.properties
+          echo "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=512m" >> android/gradle.properties
           echo "MYAPP_RELEASE_STORE_FILE=medpro-release.keystore" >> android/gradle.properties
           echo "MYAPP_RELEASE_KEY_ALIAS=medpro" >> android/gradle.properties
           echo "MYAPP_RELEASE_STORE_PASSWORD=medpro123" >> android/gradle.properties
