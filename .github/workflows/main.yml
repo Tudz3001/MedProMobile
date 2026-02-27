@@ -30,16 +30,12 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.3'
-
-      - name: Download Gradle Wrapper JAR
+      - name: Install Gradle
         run: |
-          mkdir -p android/gradle/wrapper
-          cp $GRADLE_HOME/lib/gradle-wrapper.jar android/gradle/wrapper/ 2>/dev/null || \
-          find /root -name "gradle-wrapper.jar" 2>/dev/null | head -1 | xargs -I{} cp {} android/gradle/wrapper/
+          wget -q https://services.gradle.org/distributions/gradle-8.3-bin.zip
+          unzip -q gradle-8.3-bin.zip
+          sudo mv gradle-8.3 /opt/gradle
+          echo "/opt/gradle/bin" >> $GITHUB_PATH
 
       - name: Generate Keystore
         run: |
@@ -94,7 +90,7 @@ jobs:
           python3 /tmp/patch.py
 
       - name: Build Release APK
-        run: bash android/gradlew -p android assembleRelease --no-daemon
+        run: gradle -p android assembleRelease --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
