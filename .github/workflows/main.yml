@@ -1,0 +1,104 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Generate Keystore
+        run: |
+          cd android
+          keytool -genkey -v \
+            -keystore medpro-release.keystore \
+            -alias medpro \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass medpro123 \
+            -keypass medpro123 \
+            -dname "CN=MedPro, OU=Mobile, O=MedPro, L=VN, ST=VN, C=VN"
+
+      - name: Configure signing in gradle.properties
+        run: |
+          echo "" >> android/gradle.properties
+          echo "MYAPP_RELEASE_STORE_FILE=medpro-release.keystore" >> android/gradle.properties
+          echo "MYAPP_RELEASE_KEY_ALIAS=medpro" >> android/gradle.properties
+          echo "MYAPP_RELEASE_STORE_PASSWORD=medpro123" >> android/gradle.properties
+          echo "MYAPP_RELEASE_KEY_PASSWORD=medpro123" >> android/gradle.properties
+
+      - name: Configure signing in build.gradle
+        run: |
+          cat > /tmp/build_gradle_patch.py << 'EOF'
+          import re
+
+          with open("android/app/build.gradle", "r") as f:
+              content = f.read()
+
+          signing_config = """
+              signingConfigs {
+                  release {
+                      storeFile file(MYAPP_RELEASE_STORE_FILE)
+                      storePassword MYAPP_RELEASE_STORE_PASSWORD
+                      keyAlias MYAPP_RELEASE_KEY_ALIAS
+                      keyPassword MYAPP_RELEASE_KEY_PASSWORD
+                  }
+              }
+          """
+
+          content = content.replace(
+              "    buildTypes {",
+              signing_config + "    buildTypes {"
+          )
+
+          content = content.replace(
+              "        release {",
+              "        release {\n            signingConfig signingConfigs.release"
+          )
+
+          with open("android/app/build.gradle", "w") as f:
+              f.write(content)
+
+          print("build.gradle patched successfully")
+          EOF
+          python3 /tmp/build_gradle_patch.py
+
+      - name: Build Release APK
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MedPro-APK
+          path: android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
