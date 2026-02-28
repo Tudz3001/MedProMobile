@@ -108,7 +108,7 @@ jobs:
 
       - name: Generate Keystore
         run: |
-          cd android
+          cd android/app
           keytool -genkey -v \
             -keystore medpro-release.keystore \
             -alias medpro \
@@ -118,6 +118,7 @@ jobs:
             -storepass medpro123 \
             -keypass medpro123 \
             -dname "CN=MedPro, OU=Mobile, O=MedPro, L=VN, ST=VN, C=VN"
+          touch proguard-rules.pro
 
       - name: Configure signing in gradle.properties
         run: |
