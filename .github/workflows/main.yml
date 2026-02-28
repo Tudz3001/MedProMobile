@@ -73,6 +73,39 @@ jobs:
           }
           EOF
 
+          mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+          mkdir -p android/app/src/main/res/values
+
+          for size in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            python3 -c "
+          import struct, zlib
+          def png(w,h,color):
+              def chunk(t,d): c=zlib.crc32(t+d)&0xffffffff; return struct.pack('>I',len(d))+t+d+struct.pack('>I',c)
+              raw=b''.join(b'\x00'+bytes(color)*w for _ in range(h))
+              return b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('>IIBBBBB',w,h,8,2,0,0,0))+chunk(b'IDAT',zlib.compress(raw))+chunk(b'IEND',b'')
+          open('android/app/src/main/res/mipmap-${size}/ic_launcher.png','wb').write(png(48,48,(76,175,80)))
+          open('android/app/src/main/res/mipmap-${size}/ic_launcher_round.png','wb').write(png(48,48,(76,175,80)))
+          "
+          done
+
+          cat > android/app/src/main/res/values/styles.xml << 'EOF'
+          <resources>
+              <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+                  <item name="android:editTextBackground">@android:color/transparent</item>
+              </style>
+          </resources>
+          EOF
+
+          cat > android/app/src/main/res/values/strings.xml << 'EOF'
+          <resources>
+              <string name="app_name">MedPro</string>
+          </resources>
+          EOF
+
       - name: Generate Keystore
         run: |
           cd android
